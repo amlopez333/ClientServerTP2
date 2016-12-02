@@ -8,49 +8,76 @@
 import socket
 import sys
 import json
+import readFile
+import random
+from queue import Queue
 
+
+
+def getFortune():
+    #this could work better by using info from the username to generate number
+    lineNumber = random.randrange(0, 81)
+    fortune = readFile.readLine(lineNumber)
+    return fortune
 #--load config--
-with open("config.json") as configFile:
-	config = json.load(configFile)
-host = config["host"]
-port = config["port"]
-recvWindow = config["recvWindow"]
-maxConnections = config["maxConnections"]
-timeout = config["timeout"]
- 
+def loadConfig(path):
+    with open(path) as configFile:
+            config = json.load(configFile)
+    host = config["host"]
+    port = config["port"]
+    recvWindow = config["recvWindow"]
+    maxConnections = config["maxConnections"]
+    timeout = config["timeout"]
+    return host, port, recvWindow, maxConnections, timeout
+
+#--Create TCP/IP socket
+def createSocket():
+    return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 #--Create TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-#--Create Server
-server_address = (host, port)
-print ('Launching server {0}:{1}'.format(host, port))
-sock.bind(server_address)
 
-#--Listen for incoming connections. Max is defined in configFile by maxConnections--
-sock.listen(maxConnections)
-notClosed = True
-while notClosed:
-    # Waiting for connections
-    print('Waiting...')
-    connection, client_address = sock.accept()
- 
+#--Create Server
+def createServer(socket, host, port):
+    server_address = (host, port)
+    print ('Launching server {0}:{1}'.format(host, port))
+    sock.bind(server_address)
+    return sock
+#--handle request--
+def handleRequest(client_address, recvWindow, connectionQueue):
     try:
-        print('Incomming connection from {0}'.format(client_address))
- 
-        #--Get request and transmit response
-        while True:
-            data = connection.recv(recvWindow).decode()
-            print('got {}'.format(data))
-            if data:
-                print('Sending response')
-                connection.sendall(data.encode())
-            else:
-                print('No data recieved from {}'.format(client_address))
-                break
-             
-        quit = int(input("press 1 to quit"))
-        if quit:
-                notClosed = False
+            connection = connectionQueue.dequeue()
+            print('Incomming connection from {0}'.format(client_address))
+            #--Get request and transmit response
+            while True:
+                data = connection.recv(recvWindow).decode("utf-8")
+                print('got {}'.format(data))
+                if data:
+                    print('Sending response')
+                    fortune = getFortune()
+                    connection.sendall(fortune.encode("utf-8"))
+                else:
+                    break
     finally:
-        pass
-sock.close()
+            pass
+
+def main():
+    host, port, recvWindow, maxConnections, timeout = loadConfig("config.json")
+    #--create Queue--
+    connectionQueue = Queue()
+    sock = createSocket()
+    sock = createServer(sock, host, port)
+    #--Listen for incoming connections. Max is defined in configFile by maxConnections--
+    sock.listen(5)
+    notClosed = True
+    while notClosed:
+        # Waiting for connections
+        if(connectionQueue.isEmpty()):
+            print('Waiting...')
+        connection, client_address = sock.accept()
+        connectionQueue.enqueue(connection)
+        handleRequest(client_address, recvWindow, connectionQueue)
+
+if __name__ == '__main__':
+    main()
