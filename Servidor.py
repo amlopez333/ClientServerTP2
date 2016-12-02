@@ -48,14 +48,15 @@ def createServer(socket, host, port):
 def handleRequest(client_address, recvWindow, connectionQueue):
     try:
             connection = connectionQueue.dequeue()
-            print('Incomming connection from {0}'.format(client_address))
+            
+          
             #--Get request and transmit response
             while True:
                 data = connection.recv(recvWindow).decode("utf-8")
                 print('got {}'.format(data))
                 if data:
-                    print('Sending response')
                     fortune = getFortune()
+                    print('Sending response for {0}. Response is {1}'.format(data, fortune))
                     connection.sendall(fortune.encode("utf-8"))
                 else:
                     break
