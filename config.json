@@ -1,0 +1,7 @@
+{
+	"host": "localhost",
+	"port": 3000,
+	"maxConnections": 5,
+	"recvWindow": 4096,
+	"timeout": 5
+}
